@@ -1,5 +1,7 @@
 package com.mizofumi.androidserialsample2;
 
+import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -10,6 +12,14 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
+import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
@@ -18,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
     Serial serial;
     String deviceName;
     FloatingActionButton fab;
+    LineChart lineChart;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
         status = (TextView)findViewById(R.id.status);
         fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.hide(); //未接続時は非表示
-
+        lineChart = (LineChart) findViewById(R.id.linechart);
         serial = new Serial();
 
         deviceName = getIntent().getStringExtra("deviceName");
@@ -38,6 +49,9 @@ public class MainActivity extends AppCompatActivity {
 
         serial.setSerialListener(new SerialListener() {
             String tmp; //断片化した受信データを一時的に保持する変数
+            ArrayList<Entry> values = new ArrayList<Entry>();
+
+            int counter = 0 ;
 
             @Override
             public void opened() {
@@ -72,9 +86,63 @@ public class MainActivity extends AppCompatActivity {
 
                         //データをFloat型に変換
                         float recived_data = Float.parseFloat(recived);
+                        recived_data = (recived_data-1.0f)*12.5f;
+                        values.add(new Entry(counter,recived_data));
+
+                        if (values.size() > 100){
+                            lineChart.getLineData().getDataSets().get(0).removeFirst();
+                        }
+
+                        //chart初期化
+                        //touch gesture設定
+                        lineChart.setTouchEnabled(true);
+                        // スケーリング&ドラッグ設定
+                        lineChart.setDragEnabled(true);
+                        lineChart.setScaleEnabled(true);
+                        lineChart.setDrawBorders(true);
+                        //背景
+                        lineChart.setDrawGridBackground(false);
+
+                        LineDataSet set1 = new LineDataSet(values,"波形");
+
+                        //点線設定
+                        //set1.enableDashedLine(10f, 5f, 0f);
+                        //set1.enableDashedHighlightLine(10f, 5f, 0f);
+
+                        set1.setColor(Color.GREEN);
+                        set1.setDrawValues(false);          //値ラベル表示しない
+                        set1.setLineWidth(1f);
+
+                        //プロット点設定
+                        set1.setCircleRadius(3f);
+                        set1.setDrawCircleHole(false);
+                        set1.setCircleColor(Color.GREEN);
+
+                        set1.setValueTextSize(9f);
+                        set1.setDrawFilled(false);
+                        set1.setFormLineWidth(1f);
+                        set1.setFormLineDashEffect(new DashPathEffect(new float[]{10f, 5f}, 0f));
+                        set1.setFormSize(15.f);
 
 
+                        ArrayList<ILineDataSet> dataSets = new ArrayList<ILineDataSet>();
+                        dataSets.add(set1);
 
+                        dataSets.get(0).getXMax();
+
+                        LineData lineData = new LineData(dataSets);
+
+                        lineChart.setData(lineData);
+
+
+                        lineChart.getData().notifyDataChanged();
+                        lineData.notifyDataChanged();
+
+                        //最新データまで移動
+                        lineChart.moveViewToX(lineData.getEntryCount());
+
+
+                        counter++;
 
                     }
                 }
